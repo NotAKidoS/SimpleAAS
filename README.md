@@ -20,3 +20,9 @@ Modified the incredibly-well-built Animator Cloner script to merge controllers t
 [PoiyomiToonShader](https://github.com/poiyomi/PoiyomiToonShader) - [MIT License](https://github.com/poiyomi/PoiyomiToonShader/blob/master/LICENSE)
 
 Nicked the ChilloutVR CCK Upload hook code to automatically compile controllers on upload.
+
+---
+
+Here is the block of text where I tell you it's not my fault if you're bad at Unity.
+
+> Use of this Unity Script is done so at the user's own risk and the creator cannot be held responsible for any issues arising from its use.
