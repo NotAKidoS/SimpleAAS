@@ -1,79 +1,84 @@
-﻿// using System.Collections.Concurrent;
-// using System.Threading.Tasks;
-// using System.Text;
-using static System.Math;
-using System.Collections.Generic;
-using System.Linq;
-using System.IO;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
-using System.Collections;
-using ABI.CCK.Components;
+using static NAK.SimpleAAS.ControllerCompiler;
 
-
-namespace NAK.SimpleAAS 
+namespace NAK.SimpleAAS
 {
-
     [CustomEditor(typeof(NAKSimpleAAS))]
-    public class NAKSimpleAASEditor: Editor {
+    public class NAKSimpleAASEditor : Editor
+    {
+        private SerializedProperty avatar;
+        private SerializedProperty baseOverrideController;
+        private SerializedProperty avatarControllers;
+        private ReorderableList alist;
 
-        SerializedProperty avatar;
-        SerializedProperty baseOverrideController;
-        SerializedProperty avatarAnimators;
-        
-        ReorderableList alist; 
-
-        private void OnEnable() {
-
-            //find properties
-            avatar = serializedObject.FindProperty("avatar");      
-            baseOverrideController = serializedObject.FindProperty("baseOverrideController");
-            avatarAnimators = serializedObject.FindProperty("avatarAnimators");
-
-            //initialize animator list
-            alist = new ReorderableList(serializedObject, avatarAnimators, true, true, true, true);
-            alist.drawElementCallback = DrawListItems;
-            alist.drawHeaderCallback = DrawHeader;
+        private void OnEnable()
+        {
+            FindProperties();
+            InitializeAnimatorList();
         }
 
-        public override void OnInspectorGUI() {
-            NAKSimpleAAS script = (NAKSimpleAAS)target;
+        public override void OnInspectorGUI()
+        {
+            var script = (NAKSimpleAAS)target;
 
-            serializedObject.UpdateIfDirtyOrScript();
-            GUIStyle box = GUI.skin.GetStyle("box");
-
-            //avatar input
-            EditorGUILayout.PropertyField(avatar);
-
-            EditorGUILayout.PropertyField(baseOverrideController);
-
+            serializedObject.UpdateIfRequiredOrScript();
+            DrawAvatarInput();
+            DrawBaseOverrideControllerInput();
             alist.DoLayoutList();
-
-            // Add a button named "Compile Animators"
-            if (GUILayout.Button("Compile Animators")) {
-                script.AAS_CompileAnimators();
-            }
-
+            DrawCompileControllersButton(script);
             serializedObject.ApplyModifiedProperties();
         }
 
-        
-        void DrawListItems(Rect rect, int index, bool isActive, bool isFocused)
-        {        
+        private void FindProperties()
+        {
+            avatar = serializedObject.FindProperty("avatar");
+            baseOverrideController = serializedObject.FindProperty("baseOverrideController");
+            avatarControllers = serializedObject.FindProperty("avatarControllers");
+        }
+
+        private void InitializeAnimatorList()
+        {
+            alist = new ReorderableList(serializedObject, avatarControllers, true, true, true, true)
+            {
+                drawElementCallback = DrawListItems,
+                drawHeaderCallback = DrawHeader
+            };
+        }
+
+        private void DrawAvatarInput()
+        {
+            EditorGUILayout.PropertyField(avatar);
+        }
+
+        private void DrawBaseOverrideControllerInput()
+        {
+            EditorGUILayout.PropertyField(baseOverrideController);
+        }
+
+        private void DrawCompileControllersButton(NAKSimpleAAS script)
+        {
+            if (GUILayout.Button("Compile Controllers"))
+            {
+                CompileControllers(script);
+            }
+        }
+
+        private void DrawListItems(Rect rect, int index, bool isActive, bool isFocused)
+        {
             SerializedProperty element = alist.serializedProperty.GetArrayElementAtIndex(index);
 
             EditorGUI.PropertyField(
                 new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight),
                 element,
                 GUIContent.none
-            );  
-
+            );
         }
 
-        void DrawHeader(Rect rect)
+        private void DrawHeader(Rect rect)
         {
-            string name = "Avatar Animators";
+            string name = "Avatar Controllers";
             EditorGUI.LabelField(rect, name);
         }
     }

@@ -22,8 +22,6 @@
 
 //https://github.com/VRLabs/Avatars-3.0-Manager
 
-#if UNITY_EDITOR
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -34,41 +32,26 @@ using UnityEngine;
 
 namespace NAK.SimpleAAS
 {
-    public static class AnimatorCloner
+    public static class ControllerCloner
     {
-
-        public const string STANDARD_NEW_ANIMATOR_FOLDER = "Assets/NotAKid/SimpleAAS_Generated/Animators/";
-        private static Dictionary<string, string> _parametersNewName;
-        private static string _assetPath;
-        private static string _fileName;
+        public const string STANDARD_NEW_CONTROLLER_FOLDER = "Assets/NotAKid/SimpleAAS.Generated/Controllers/";
+        static Dictionary<string, string> _parametersNewName;
+        static string _assetPath;
+        static string _fileName;
 
         public static AnimatorController MergeMultipleControllers(AnimatorController[] controllersToMerge, Dictionary<string, string> paramNameSwap = null, bool saveToNew = true, bool useUnique = false, string newName = null)
         {
             var mainController = controllersToMerge[0];
-
-            if (mainController == null)
-            {
-                return null;
-            }
+            if (mainController == null) return null;
 
             _parametersNewName = paramNameSwap ?? new Dictionary<string, string>();
             _assetPath = AssetDatabase.GetAssetPath(mainController);
-            _fileName = (newName == null) ? Path.GetFileName(_assetPath) : newName + Path.GetExtension(_assetPath);
+            _fileName = newName == null ? Path.GetFileName(_assetPath) : $"{newName}{Path.GetExtension(_assetPath)}";
 
             if (saveToNew)
             {
-                Directory.CreateDirectory(STANDARD_NEW_ANIMATOR_FOLDER);
-
-                string uniquePath;
-                if(useUnique)
-                {
-                    uniquePath = AssetDatabase.GenerateUniqueAssetPath(STANDARD_NEW_ANIMATOR_FOLDER + _fileName);
-                }
-                else
-                {
-                    uniquePath = STANDARD_NEW_ANIMATOR_FOLDER + _fileName;
-                }
-
+                Directory.CreateDirectory(STANDARD_NEW_CONTROLLER_FOLDER);
+                string uniquePath = useUnique ? AssetDatabase.GenerateUniqueAssetPath($"{STANDARD_NEW_CONTROLLER_FOLDER}{_fileName}") : $"{STANDARD_NEW_CONTROLLER_FOLDER}{_fileName}";
                 AssetDatabase.CopyAsset(_assetPath, uniquePath);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
@@ -76,45 +59,18 @@ namespace NAK.SimpleAAS
                 mainController = AssetDatabase.LoadAssetAtPath<AnimatorController>(_assetPath);
             }
 
-            if (controllersToMerge.Count() == 1)
+            if (controllersToMerge.Length > 1)
             {
-                return mainController;
+                for (int c = 1; c < controllersToMerge.Length; c++)
+                {
+                    var controllerToMerge = controllersToMerge[c];
+                    AddNewParameters(mainController, controllerToMerge);
+                    MergeControllerLayers(mainController, controllerToMerge);
+                }
             }
 
-            //itterate over multiple controllers to merge into the final one
-
-            for (int c = 1; c<controllersToMerge.Count(); c++)
-			{
-                var controllerToMerge = controllersToMerge[c];
-                foreach (var p in controllerToMerge.parameters)
-                {
-                    //skip parameter if has trigger comment
-                    if (p.name.StartsWith("#--")) continue;
-
-                    var newP = new AnimatorControllerParameter
-                    {
-                        name = GetNewParameterNameIfSwapped(p.name),
-                        type = p.type,
-                        defaultBool = p.defaultBool,
-                        defaultFloat = p.defaultFloat,
-                        defaultInt = p.defaultInt
-                    };
-                    if (mainController.parameters.Count(x => x.name.Equals(newP.name)) == 0)
-                    {
-                        mainController.AddParameter(newP);
-                    }
-                }
-
-                for (int i = 0; i < controllerToMerge.layers.Length; i++)
-                {
-                    AnimatorControllerLayer newL = CloneLayer(controllerToMerge.layers[i], i == 0);
-                    newL.name = mainController.MakeUniqueLayerName(newL.name);// MakeLayerNameUnique(newL.name, mainController);
-                    newL.stateMachine.name = newL.name;
-                    mainController.AddLayer(newL);
-                }
-
-            }
-
+            // Remove comment parameters from final controller
+            RemoveCommentParameters(mainController);
             EditorUtility.SetDirty(mainController);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -122,7 +78,46 @@ namespace NAK.SimpleAAS
             return mainController;
         }
 
-        private static string GetNewParameterNameIfSwapped(string parameterName) => 
+        private static void AddNewParameters(AnimatorController mainController, AnimatorController controllerToMerge)
+        {
+            foreach (var p in controllerToMerge.parameters)
+            {
+                var newP = new AnimatorControllerParameter
+                {
+                    name = GetNewParameterNameIfSwapped(p.name),
+                    type = p.type,
+                    defaultBool = p.defaultBool,
+                    defaultFloat = p.defaultFloat,
+                    defaultInt = p.defaultInt
+                };
+                if (!mainController.parameters.Any(x => x.name.Equals(newP.name))) mainController.AddParameter(newP);
+            }
+        }
+
+        private static void MergeControllerLayers(AnimatorController mainController, AnimatorController controllerToMerge)
+        {
+            for (int i = 0; i < controllerToMerge.layers.Length; i++)
+            {
+                AnimatorControllerLayer newL = CloneLayer(controllerToMerge.layers[i], i == 0);
+                newL.name = mainController.MakeUniqueLayerName(newL.name);
+                newL.stateMachine.name = newL.name;
+                mainController.AddLayer(newL);
+            }
+        }
+
+        private static void RemoveCommentParameters(AnimatorController mainController)
+        {
+            var parametersToRemove = mainController.parameters
+                .Where(p => p.name.StartsWith("#--") && p.type == AnimatorControllerParameterType.Trigger)
+                .ToList();
+
+            foreach (var p in parametersToRemove)
+            {
+                mainController.RemoveParameter(p);
+            }
+        }
+
+        private static string GetNewParameterNameIfSwapped(string parameterName) =>
             !string.IsNullOrWhiteSpace(parameterName) && _parametersNewName.ContainsKey(parameterName) ? _parametersNewName[parameterName] : parameterName;
 
         private static string MakeLayerNameUnique(string name, AnimatorController controller)
@@ -172,7 +167,7 @@ namespace NAK.SimpleAAS
                 stateMachines = old.stateMachines.Select(x => CloneChildStateMachine(x)).ToArray(),
                 states = old.states.Select(x => CloneChildAnimatorState(x)).ToArray()
             };
-            
+
             AssetDatabase.AddObjectToAsset(n, _assetPath);
             n.defaultState = FindState(old.defaultState, old, n);
 
@@ -288,7 +283,7 @@ namespace NAK.SimpleAAS
                 {
                     childMotion.motion = child.motion;
                 }
-                
+
                 ArrayUtility.Add(ref children, childMotion);
                 pastedTree.children = children;
             }
@@ -302,7 +297,7 @@ namespace NAK.SimpleAAS
             {
                 throw new ArgumentException("2 state machine behaviours that should be of the same type are not.");
             }
-    
+
             // switch (n)
             // {
             //     case VRCAnimatorLayerControl l:
@@ -402,7 +397,7 @@ namespace NAK.SimpleAAS
             for (int i = 0; i < oldStates.Length; i++)
                 if (oldStates[i] == original)
                     return newStates[i];
-            
+
             return null;
         }
 
@@ -444,7 +439,7 @@ namespace NAK.SimpleAAS
                 newAnimatorsByChildren?.Add(child, sm);
                 gcsm.AddRange(GetStateMachinesRecursive(child, newAnimatorsByChildren));
             }
-            
+
             return gcsm;
         }
 
@@ -456,7 +451,7 @@ namespace NAK.SimpleAAS
 
             return null;
         }
-        
+
         private static AnimatorStateMachine FindMatchingStateMachine(List<AnimatorStateMachine> old, List<AnimatorStateMachine> n, AnimatorTransitionBase transition)
         {
             for (int i = 0; i < old.Count; i++)
@@ -501,10 +496,10 @@ namespace NAK.SimpleAAS
                         ApplyTransitionSettings(transition, newTransition);
                 }
             }
-            
+
             for (int i = 0; i < oldStateMachines.Count; i++)
             {
-                if(oldAnimatorsByChildren.ContainsKey(oldStateMachines[i]) && newAnimatorsByChildren.ContainsKey(newStateMachines[i]))
+                if (oldAnimatorsByChildren.ContainsKey(oldStateMachines[i]) && newAnimatorsByChildren.ContainsKey(newStateMachines[i]))
                 {
                     foreach (var transition in oldAnimatorsByChildren[oldStateMachines[i]].GetStateMachineTransitions(oldStateMachines[i]))
                     {
@@ -597,7 +592,7 @@ namespace NAK.SimpleAAS
             newTransition.solo = transition.solo;
             foreach (var condition in transition.conditions)
                 newTransition.AddCondition(condition.mode, condition.threshold, GetNewParameterNameIfSwapped(condition.parameter));
-            
+
         }
 
         private static void ApplyTransitionSettings(AnimatorTransition transition, AnimatorTransition newTransition)
@@ -609,9 +604,7 @@ namespace NAK.SimpleAAS
             newTransition.solo = transition.solo;
             foreach (var condition in transition.conditions)
                 newTransition.AddCondition(condition.mode, condition.threshold, GetNewParameterNameIfSwapped(condition.parameter));
-            
+
         }
     }
 }
-
-#endif
