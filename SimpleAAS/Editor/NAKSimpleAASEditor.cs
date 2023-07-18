@@ -8,66 +8,62 @@ namespace NAK.SimpleAAS
     [CustomEditor(typeof(NAKSimpleAAS))]
     public class NAKSimpleAASEditor : Editor
     {
-        private SerializedProperty avatar;
-        private SerializedProperty baseOverrideController;
-        private SerializedProperty avatarControllers;
-        private ReorderableList alist;
+        private SerializedProperty _avatar;
+        private SerializedProperty _baseOverrideController;
+        private SerializedProperty _avatarControllers;
+        private ReorderableList _controllerReorderableList;
+
+        #region GUI Methods
 
         private void OnEnable()
         {
-            FindProperties();
-            InitializeAnimatorList();
+            _avatar = serializedObject.FindProperty("avatar");
+            _baseOverrideController = serializedObject.FindProperty("baseOverrideController");
+            _avatarControllers = serializedObject.FindProperty("avatarControllers");
+
+            _controllerReorderableList = new ReorderableList(serializedObject, _avatarControllers, true, true, true, true)
+            {
+                drawHeaderCallback = DrawControllerListHeader,
+                drawElementCallback = DrawControllerListItems
+            };
         }
 
         public override void OnInspectorGUI()
         {
             var script = (NAKSimpleAAS)target;
-
             serializedObject.UpdateIfRequiredOrScript();
-            DrawAvatarInput();
-            DrawBaseOverrideControllerInput();
-            alist.DoLayoutList();
-            DrawCompileControllersButton(script);
+
+            EditorGUILayout.PropertyField(_avatar);
+            EditorGUILayout.PropertyField(_baseOverrideController);
+            EditorGUILayout.Space();
+
+            int parameterUsage = script.GetParameterSyncUsage();
+            EditorGUI.ProgressBar(
+                EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight),
+                parameterUsage / 3200f,
+                parameterUsage + " of 3200 Synced Bits used."
+            );
+            
+            _controllerReorderableList.DoLayoutList();
+
+            if (GUILayout.Button("Compile Controllers"))
+                CompileControllers(script);
+
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void FindProperties()
+        #endregion
+
+        #region Controller Reorderable List Drawing
+
+        private void DrawControllerListHeader(Rect rect)
         {
-            avatar = serializedObject.FindProperty("avatar");
-            baseOverrideController = serializedObject.FindProperty("baseOverrideController");
-            avatarControllers = serializedObject.FindProperty("avatarControllers");
+            EditorGUI.LabelField(rect, "Avatar Controllers");
         }
 
-        private void InitializeAnimatorList()
+        private void DrawControllerListItems(Rect rect, int index, bool isActive, bool isFocused)
         {
-            alist = new ReorderableList(serializedObject, avatarControllers, true, true, true, true)
-            {
-                drawElementCallback = DrawListItems,
-                drawHeaderCallback = DrawHeader
-            };
-        }
-
-        private void DrawAvatarInput()
-        {
-            EditorGUILayout.PropertyField(avatar);
-        }
-
-        private void DrawBaseOverrideControllerInput()
-        {
-            EditorGUILayout.PropertyField(baseOverrideController);
-        }
-
-        private void DrawCompileControllersButton(NAKSimpleAAS script)
-        {
-            if (GUILayout.Button("Compile Controllers"))
-            {
-                CompileControllers(script);
-            }
-        }
-
-        private void DrawListItems(Rect rect, int index, bool isActive, bool isFocused)
-        {
-            SerializedProperty element = alist.serializedProperty.GetArrayElementAtIndex(index);
+            SerializedProperty element = _controllerReorderableList.serializedProperty.GetArrayElementAtIndex(index);
 
             EditorGUI.PropertyField(
                 new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight),
@@ -76,10 +72,6 @@ namespace NAK.SimpleAAS
             );
         }
 
-        private void DrawHeader(Rect rect)
-        {
-            string name = "Avatar Controllers";
-            EditorGUI.LabelField(rect, name);
-        }
+        #endregion
     }
 }

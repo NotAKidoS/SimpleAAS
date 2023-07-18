@@ -22,10 +22,12 @@
 
 //https://github.com/poiyomi/PoiyomiToonShader/
 
-using ABI.CCK.Scripts.Editor;
 using System.Linq;
+using ABI.CCK.Scripts.Editor;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using static NAK.SimpleAAS.ControllerCloner;
 
 namespace NAK.SimpleAAS
@@ -37,31 +39,40 @@ namespace NAK.SimpleAAS
         {
             static CompileControllersOnBuild() => CCK_BuildUtility.PreAvatarBundleEvent.AddListener(OnPreBundleEvent);
 
-            static void OnPreBundleEvent(GameObject uploadedObject)
+            private static void OnPreBundleEvent(GameObject uploadedObject)
             {
-                var targetScene = uploadedObject.scene;
+                Scene targetScene = uploadedObject.scene;
                 var allAASComponents = targetScene.GetRootGameObjects()
                     .SelectMany(x => x.GetComponentsInChildren<NAKSimpleAAS>(true));
 
-                var targetAvatar = allAASComponents.FirstOrDefault(aas => aas.avatar.gameObject == uploadedObject);
+                NAKSimpleAAS targetAvatar =
+                    allAASComponents.FirstOrDefault(aas => aas.avatar.gameObject == uploadedObject);
 
-                if (targetAvatar != null)
-                {
-                    CompileControllers(targetAvatar);
-                }
+                if (targetAvatar != null) CompileControllers(targetAvatar);
             }
         }
 
         public static void CompileControllers(NAKSimpleAAS script)
         {
-            var resultController = MergeMultipleControllers(script.avatarControllers, null, true, false, script.avatar.gameObject.name);
-            script.baseOverrideController.runtimeAnimatorController = resultController;
-            script.avatar.overrides = script.baseOverrideController;
-            Animator animator = script.avatar.gameObject.GetComponent<Animator>();
-            if (animator != null)
+            AnimatorController resultController = MergeMultipleControllers(
+                script.avatarControllers,
+                null,
+                true,
+                false,
+                script.avatar.gameObject.name
+            );
+
+            if (script.baseOverrideController != null)
+            {
+                script.baseOverrideController.runtimeAnimatorController = resultController;
+                script.avatar.overrides = script.baseOverrideController;
+            }
+
+            if (script.avatar.gameObject.TryGetComponent<Animator>(out var animator))
             {
                 animator.runtimeAnimatorController = script.baseOverrideController;
             }
+
             EditorUtility.SetDirty(script.avatar);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

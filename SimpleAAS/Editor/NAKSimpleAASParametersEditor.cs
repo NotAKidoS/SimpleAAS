@@ -54,8 +54,6 @@ namespace NAK.SimpleAAS
                 foreach (var setting in settings.settings)
                 {
                     modularSettings.avatar.avatarSettings.settings.Add(setting);
-
-                    Debug.Log(setting.setting.usedType);
                 }
             }
             AssetDatabase.SaveAssets();

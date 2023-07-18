@@ -1,14 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using System.Collections.Generic;
 using ABI.CCK.Scripts;
+using UnityEngine;
 
 [CreateAssetMenu(fileName = "SimpleAAS_Parameters", menuName = "NAKSimpleAAS/SimpleAAS_Parameters")]
 public class NAKModularSettings : ScriptableObject
 {
     public List<CVRAdvancedSettingsEntry> settings = new List<CVRAdvancedSettingsEntry>();
 
-    public static CVRAdvancesAvatarSettingBase.ParameterType GetDefaultType(CVRAdvancedSettingsEntry.SettingsType settingType)
+    public static CVRAdvancesAvatarSettingBase.ParameterType GetDefaultType(
+        CVRAdvancedSettingsEntry.SettingsType settingType)
     {
         switch (settingType)
         {
@@ -24,9 +24,10 @@ public class NAKModularSettings : ScriptableObject
         }
     }
 
-    public static List<CVRAdvancesAvatarSettingBase.ParameterType> GetSupportedTypes(CVRAdvancedSettingsEntry.SettingsType settingType)
+    public static List<CVRAdvancesAvatarSettingBase.ParameterType> GetSupportedTypes(
+        CVRAdvancedSettingsEntry.SettingsType settingType)
     {
-        List<CVRAdvancesAvatarSettingBase.ParameterType> supportedTypes = new List<CVRAdvancesAvatarSettingBase.ParameterType>();
+        var supportedTypes = new List<CVRAdvancesAvatarSettingBase.ParameterType>();
 
         switch (settingType)
         {
