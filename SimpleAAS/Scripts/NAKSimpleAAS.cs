@@ -32,7 +32,7 @@ namespace NAK.SimpleAAS
             var syncedValues = 0;
             var syncedBooleans = 0;
 
-            if (avatar.avatarSettings == null)
+            if (avatar?.avatarSettings == null)
                 return 0;
 
             var animatorParameters = new HashSet<string>();

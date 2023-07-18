@@ -26,22 +26,26 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ABI.CCK.Components;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using static ABI.CCK.Components.CVRParameterStreamEntry;
 
 namespace NAK.SimpleAAS
 {
     public static class ControllerCloner
     {
         public const string STANDARD_NEW_CONTROLLER_FOLDER = "Assets/NotAKid/SimpleAAS.Generated/Controllers/";
-        static Dictionary<string, string> _parametersNewName;
-        static string _assetPath;
-        static string _fileName;
+        private static Dictionary<string, string> _parametersNewName;
+        private static string _assetPath;
+        private static string _fileName;
 
-        public static AnimatorController MergeMultipleControllers(AnimatorController[] controllersToMerge, Dictionary<string, string> paramNameSwap = null, bool saveToNew = true, bool useUnique = false, string newName = null)
+        public static AnimatorController MergeMultipleControllers(AnimatorController[] controllersToMerge,
+            Dictionary<string, string> paramNameSwap = null, bool saveToNew = true, bool useUnique = false,
+            string newName = null)
         {
-            var mainController = controllersToMerge[0];
+            AnimatorController mainController = controllersToMerge[0];
             if (mainController == null) return null;
 
             _parametersNewName = paramNameSwap ?? new Dictionary<string, string>();
@@ -51,7 +55,9 @@ namespace NAK.SimpleAAS
             if (saveToNew)
             {
                 Directory.CreateDirectory(STANDARD_NEW_CONTROLLER_FOLDER);
-                string uniquePath = useUnique ? AssetDatabase.GenerateUniqueAssetPath($"{STANDARD_NEW_CONTROLLER_FOLDER}{_fileName}") : $"{STANDARD_NEW_CONTROLLER_FOLDER}{_fileName}";
+                var uniquePath = useUnique
+                    ? AssetDatabase.GenerateUniqueAssetPath($"{STANDARD_NEW_CONTROLLER_FOLDER}{_fileName}")
+                    : $"{STANDARD_NEW_CONTROLLER_FOLDER}{_fileName}";
                 AssetDatabase.CopyAsset(_assetPath, uniquePath);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
@@ -60,14 +66,12 @@ namespace NAK.SimpleAAS
             }
 
             if (controllersToMerge.Length > 1)
-            {
-                for (int c = 1; c < controllersToMerge.Length; c++)
+                for (var c = 1; c < controllersToMerge.Length; c++)
                 {
-                    var controllerToMerge = controllersToMerge[c];
+                    AnimatorController controllerToMerge = controllersToMerge[c];
                     AddNewParameters(mainController, controllerToMerge);
                     MergeControllerLayers(mainController, controllerToMerge);
                 }
-            }
 
             // Remove comment parameters from final controller
             RemoveCommentParameters(mainController);
@@ -80,9 +84,9 @@ namespace NAK.SimpleAAS
 
         private static void AddNewParameters(AnimatorController mainController, AnimatorController controllerToMerge)
         {
-            foreach (var p in controllerToMerge.parameters)
+            foreach (AnimatorControllerParameter p in controllerToMerge.parameters)
             {
-                var newP = new AnimatorControllerParameter
+                AnimatorControllerParameter newP = new AnimatorControllerParameter
                 {
                     name = GetNewParameterNameIfSwapped(p.name),
                     type = p.type,
@@ -94,9 +98,10 @@ namespace NAK.SimpleAAS
             }
         }
 
-        private static void MergeControllerLayers(AnimatorController mainController, AnimatorController controllerToMerge)
+        private static void MergeControllerLayers(AnimatorController mainController,
+            AnimatorController controllerToMerge)
         {
-            for (int i = 0; i < controllerToMerge.layers.Length; i++)
+            for (var i = 0; i < controllerToMerge.layers.Length; i++)
             {
                 AnimatorControllerLayer newL = CloneLayer(controllerToMerge.layers[i], i == 0);
                 newL.name = mainController.MakeUniqueLayerName(newL.name);
@@ -111,36 +116,35 @@ namespace NAK.SimpleAAS
                 .Where(p => p.name.StartsWith("#--") && p.type == AnimatorControllerParameterType.Trigger)
                 .ToList();
 
-            foreach (var p in parametersToRemove)
-            {
-                mainController.RemoveParameter(p);
-            }
+            foreach (AnimatorControllerParameter p in parametersToRemove) mainController.RemoveParameter(p);
         }
 
-        private static string GetNewParameterNameIfSwapped(string parameterName) =>
-            !string.IsNullOrWhiteSpace(parameterName) && _parametersNewName.ContainsKey(parameterName) ? _parametersNewName[parameterName] : parameterName;
+        private static string GetNewParameterNameIfSwapped(string parameterName)
+        {
+            return !string.IsNullOrWhiteSpace(parameterName) && _parametersNewName.TryGetValue(parameterName, out var parameterNewName)
+                ? parameterNewName
+                : parameterName;
+        }
 
         private static string MakeLayerNameUnique(string name, AnimatorController controller)
         {
-            string st = "";
-            int c = 0;
-            bool combinedNameDuplicate = controller.layers.Count(x => x.name.Equals(name)) > 0;
+            var st = "";
+            var c = 0;
+            var combinedNameDuplicate = controller.layers.Count(x => x.name.Equals(name)) > 0;
             while (combinedNameDuplicate)
             {
                 c++;
                 combinedNameDuplicate = controller.layers.Count(x => x.name.Equals(name + st + c)) > 0;
             }
-            if (c != 0)
-            {
-                st += c;
-            }
+
+            if (c != 0) st += c;
 
             return name + st;
         }
 
         private static AnimatorControllerLayer CloneLayer(AnimatorControllerLayer old, bool isFirstLayer = false)
         {
-            var n = new AnimatorControllerLayer
+            AnimatorControllerLayer n = new AnimatorControllerLayer
             {
                 avatarMask = old.avatarMask,
                 blendingMode = old.blendingMode,
@@ -156,7 +160,7 @@ namespace NAK.SimpleAAS
 
         private static AnimatorStateMachine CloneStateMachine(AnimatorStateMachine old)
         {
-            var n = new AnimatorStateMachine
+            AnimatorStateMachine n = new AnimatorStateMachine
             {
                 anyStatePosition = old.anyStatePosition,
                 entryPosition = old.entryPosition,
@@ -171,17 +175,18 @@ namespace NAK.SimpleAAS
             AssetDatabase.AddObjectToAsset(n, _assetPath);
             n.defaultState = FindState(old.defaultState, old, n);
 
-            foreach (var oldb in old.behaviours)
+            foreach (StateMachineBehaviour oldb in old.behaviours)
             {
-                var behaviour = n.AddStateMachineBehaviour(oldb.GetType());
+                StateMachineBehaviour behaviour = n.AddStateMachineBehaviour(oldb.GetType());
                 CloneBehaviourParameters(oldb, behaviour);
             }
+
             return n;
         }
 
         private static ChildAnimatorStateMachine CloneChildStateMachine(ChildAnimatorStateMachine old)
         {
-            var n = new ChildAnimatorStateMachine
+            ChildAnimatorStateMachine n = new ChildAnimatorStateMachine
             {
                 position = old.position,
                 stateMachine = CloneStateMachine(old.stateMachine)
@@ -191,16 +196,17 @@ namespace NAK.SimpleAAS
 
         private static ChildAnimatorState CloneChildAnimatorState(ChildAnimatorState old)
         {
-            var n = new ChildAnimatorState
+            ChildAnimatorState n = new ChildAnimatorState
             {
                 position = old.position,
                 state = CloneAnimatorState(old.state)
             };
-            foreach (var oldb in old.state.behaviours)
+            foreach (StateMachineBehaviour oldb in old.state.behaviours)
             {
-                var behaviour = n.state.AddStateMachineBehaviour(oldb.GetType());
+                StateMachineBehaviour behaviour = n.state.AddStateMachineBehaviour(oldb.GetType());
                 CloneBehaviourParameters(oldb, behaviour);
             }
+
             return n;
         }
 
@@ -210,14 +216,14 @@ namespace NAK.SimpleAAS
             Motion motion = old.motion;
             if (motion is BlendTree oldTree)
             {
-                var tree = CloneBlendTree(null, oldTree);
+                BlendTree tree = CloneBlendTree(null, oldTree);
                 motion = tree;
                 // need to save the blend tree into the animator
                 tree.hideFlags = HideFlags.HideInHierarchy;
                 AssetDatabase.AddObjectToAsset(motion, _assetPath);
             }
 
-            var n = new AnimatorState
+            AnimatorState n = new AnimatorState
             {
                 cycleOffset = old.cycleOffset,
                 cycleOffsetParameter = GetNewParameterNameIfSwapped(old.cycleOffsetParameter),
@@ -257,11 +263,11 @@ namespace NAK.SimpleAAS
 
             // Recursively duplicate the tree structure
             // Motions can be directly added as references while trees must be recursively to avoid accidental sharing
-            foreach (var child in oldTree.children)
+            foreach (ChildMotion child in oldTree.children)
             {
                 var children = pastedTree.children;
 
-                var childMotion = new ChildMotion
+                ChildMotion childMotion = new ChildMotion
                 {
                     timeScale = child.timeScale,
                     position = child.position,
@@ -273,7 +279,7 @@ namespace NAK.SimpleAAS
 
                 if (child.motion is BlendTree tree)
                 {
-                    var childTree = CloneBlendTree(pastedTree, tree);
+                    BlendTree childTree = CloneBlendTree(pastedTree, tree);
                     childMotion.motion = childTree;
                     // need to save the blend tree into the animator
                     childTree.hideFlags = HideFlags.HideInHierarchy;
@@ -294,121 +300,70 @@ namespace NAK.SimpleAAS
         private static void CloneBehaviourParameters(StateMachineBehaviour old, StateMachineBehaviour n)
         {
             if (old.GetType() != n.GetType())
-            {
                 throw new ArgumentException("2 state machine behaviours that should be of the same type are not.");
-            }
 
-            // switch (n)
-            // {
-            //     case VRCAnimatorLayerControl l:
-            //         {
-            //             var o = old as VRCAnimatorLayerControl;
-            //             l.ApplySettings = o.ApplySettings;
-            //             l.blendDuration = o.blendDuration;
-            //             l.debugString = o.debugString;
-            //             l.goalWeight = o.goalWeight;
-            //             l.layer = o.layer;
-            //             l.playable = o.playable;
-            //             break;
-            //         }
-            //     case VRCAnimatorLocomotionControl l:
-            //         {
-            //             var o = old as VRCAnimatorLocomotionControl;
-            //             l.ApplySettings = o.ApplySettings;
-            //             l.debugString = o.debugString;
-            //             l.disableLocomotion = o.disableLocomotion;
-            //             break;
-            //         }
-            //     case VRCAnimatorTemporaryPoseSpace l:
-            //         {
-            //             var o = old as VRCAnimatorTemporaryPoseSpace;
-            //             l.ApplySettings = o.ApplySettings;
-            //             l.debugString = o.debugString;
-            //             l.delayTime = o.delayTime;
-            //             l.enterPoseSpace = o.enterPoseSpace;
-            //             l.fixedDelay = o.fixedDelay;
-            //             break;
-            //         }
-            //     case VRCAnimatorTrackingControl l:
-            //         {
-            //             var o = old as VRCAnimatorTrackingControl;
-            //             l.ApplySettings = o.ApplySettings;
-            //             l.debugString = o.debugString;
-            //             l.trackingEyes = o.trackingEyes;
-            //             l.trackingHead = o.trackingHead;
-            //             l.trackingHip = o.trackingHip;
-            //             l.trackingLeftFingers = o.trackingLeftFingers;
-            //             l.trackingLeftFoot = o.trackingLeftFoot;
-            //             l.trackingLeftHand = o.trackingLeftHand;
-            //             l.trackingMouth = o.trackingMouth;
-            //             l.trackingRightFingers = o.trackingRightFingers;
-            //             l.trackingRightFoot = o.trackingRightFoot;
-            //             l.trackingRightHand = o.trackingRightHand;
-            //             break;
-            //         }
-            //     case VRCAvatarParameterDriver l:
-            //         {
-            //             var d = old as VRCAvatarParameterDriver;
-            //             l.debugString = d.debugString;
-            //             l.localOnly = d.localOnly;
-            //             l.isLocalPlayer = d.isLocalPlayer;
-            //             l.initialized = d.initialized;
-            //             l.parameters = d.parameters.ConvertAll(p =>
-            //             {
-            //                 string name = GetNewParameterNameIfSwapped(p.name);
-            //                 return new VRC_AvatarParameterDriver.Parameter 
-            //                 { 
-            //                     name = name, 
-            //                     value = p.value, 
-            //                     chance = p.chance, 
-            //                     valueMin = p.valueMin, 
-            //                     valueMax = p.valueMax, 
-            //                     type = p.type, 
-            //                     source = GetNewParameterNameIfSwapped(p.source), 
-            //                     convertRange = p.convertRange, 
-            //                     destMax = p.destMax, 
-            //                     destMin = p.destMin, 
-            //                     destParam = p.destParam, 
-            //                     sourceMax = p.sourceMax, 
-            //                     sourceMin = p.sourceMin, 
-            //                     sourceParam = p.sourceParam
-            //                 };
-            //             });
-            //             break;
-            //         }
-            //     case VRCPlayableLayerControl l:
-            //         {
-            //             var o = old as VRCPlayableLayerControl;
-            //             l.ApplySettings = o.ApplySettings;
-            //             l.blendDuration = o.blendDuration;
-            //             l.debugString = o.debugString;
-            //             l.goalWeight = o.goalWeight;
-            //             l.layer = o.layer;
-            //             l.outputParamHash = o.outputParamHash;
-            //             break;
-            //         }
-            // }
+            switch (n)
+            {
+                 case AnimatorDriver l:
+                     {
+                         var o = old as AnimatorDriver;
+                         l.EnterTasks = o.EnterTasks.ConvertAll(task => new AnimatorDriverTask
+                         { 
+                             aName = GetNewParameterNameIfSwapped(task.aName), 
+                             aType = task.aType,
+                             aValue = task.aValue,
+                             aMax = task.aMax,
+                             aParamType = task.aParamType,
+                             bName = GetNewParameterNameIfSwapped(task.bName), 
+                             bType = task.bType,
+                             bValue = task.bValue,
+                             bMax = task.bMax,
+                             bParamType = task.bParamType,
+                             targetType = task.targetType, 
+                             targetName = GetNewParameterNameIfSwapped(task.targetName),
+                             op = task.op,
+                         });
+                         l.ExitTasks = o.ExitTasks.ConvertAll(task => new AnimatorDriverTask
+                         {
+                             aName = GetNewParameterNameIfSwapped(task.aName),
+                             aType = task.aType,
+                             aValue = task.aValue,
+                             aMax = task.aMax,
+                             aParamType = task.aParamType,
+                             bName = GetNewParameterNameIfSwapped(task.bName),
+                             bType = task.bType,
+                             bValue = task.bValue,
+                             bMax = task.bMax,
+                             bParamType = task.bParamType,
+                             targetType = task.targetType,
+                             targetName = GetNewParameterNameIfSwapped(task.targetName),
+                             op = task.op,
+                         });
+                        break;
+                     }
+            }
         }
 
         private static AnimatorState FindState(AnimatorState original, AnimatorStateMachine old, AnimatorStateMachine n)
         {
-            AnimatorState[] oldStates = GetStatesRecursive(old).ToArray();
-            AnimatorState[] newStates = GetStatesRecursive(n).ToArray();
-            for (int i = 0; i < oldStates.Length; i++)
+            var oldStates = GetStatesRecursive(old).ToArray();
+            var newStates = GetStatesRecursive(n).ToArray();
+            for (var i = 0; i < oldStates.Length; i++)
                 if (oldStates[i] == original)
                     return newStates[i];
 
             return null;
         }
 
-        private static AnimatorStateMachine FindStateMachine(AnimatorStateTransition transition, AnimatorStateMachine sm)
+        private static AnimatorStateMachine FindStateMachine(AnimatorStateTransition transition,
+            AnimatorStateMachine sm)
         {
-            AnimatorStateMachine[] childrenSm = sm.stateMachines.Select(x => x.stateMachine).ToArray();
-            var dstSm = Array.Find(childrenSm, x => x.name == transition.destinationStateMachine.name);
+            var childrenSm = sm.stateMachines.Select(x => x.stateMachine).ToArray();
+            AnimatorStateMachine dstSm = Array.Find(childrenSm, x => x.name == transition.destinationStateMachine.name);
             if (dstSm != null)
                 return dstSm;
 
-            foreach (var childSm in childrenSm)
+            foreach (AnimatorStateMachine childSm in childrenSm)
             {
                 dstSm = FindStateMachine(transition, childSm);
                 if (dstSm != null)
@@ -420,8 +375,8 @@ namespace NAK.SimpleAAS
 
         private static List<AnimatorState> GetStatesRecursive(AnimatorStateMachine sm)
         {
-            List<AnimatorState> childrenStates = sm.states.Select(x => x.state).ToList();
-            foreach (var child in sm.stateMachines.Select(x => x.stateMachine))
+            var childrenStates = sm.states.Select(x => x.state).ToList();
+            foreach (AnimatorStateMachine child in sm.stateMachines.Select(x => x.stateMachine))
                 childrenStates.AddRange(GetStatesRecursive(child));
 
             return childrenStates;
@@ -430,11 +385,11 @@ namespace NAK.SimpleAAS
         private static List<AnimatorStateMachine> GetStateMachinesRecursive(AnimatorStateMachine sm,
             IDictionary<AnimatorStateMachine, AnimatorStateMachine> newAnimatorsByChildren = null)
         {
-            List<AnimatorStateMachine> childrenSm = sm.stateMachines.Select(x => x.stateMachine).ToList();
+            var childrenSm = sm.stateMachines.Select(x => x.stateMachine).ToList();
 
-            List<AnimatorStateMachine> gcsm = new List<AnimatorStateMachine>();
+            var gcsm = new List<AnimatorStateMachine>();
             gcsm.Add(sm);
-            foreach (var child in childrenSm)
+            foreach (AnimatorStateMachine child in childrenSm)
             {
                 newAnimatorsByChildren?.Add(child, sm);
                 gcsm.AddRange(GetStateMachinesRecursive(child, newAnimatorsByChildren));
@@ -443,18 +398,20 @@ namespace NAK.SimpleAAS
             return gcsm;
         }
 
-        private static AnimatorState FindMatchingState(List<AnimatorState> old, List<AnimatorState> n, AnimatorTransitionBase transition)
+        private static AnimatorState FindMatchingState(List<AnimatorState> old, List<AnimatorState> n,
+            AnimatorTransitionBase transition)
         {
-            for (int i = 0; i < old.Count; i++)
+            for (var i = 0; i < old.Count; i++)
                 if (transition.destinationState == old[i])
                     return n[i];
 
             return null;
         }
 
-        private static AnimatorStateMachine FindMatchingStateMachine(List<AnimatorStateMachine> old, List<AnimatorStateMachine> n, AnimatorTransitionBase transition)
+        private static AnimatorStateMachine FindMatchingStateMachine(List<AnimatorStateMachine> old,
+            List<AnimatorStateMachine> n, AnimatorTransitionBase transition)
         {
-            for (int i = 0; i < old.Count; i++)
+            for (var i = 0; i < old.Count; i++)
                 if (transition.destinationStateMachine == old[i])
                     return n[i];
 
@@ -463,31 +420,32 @@ namespace NAK.SimpleAAS
 
         private static void CloneTransitions(AnimatorStateMachine old, AnimatorStateMachine n)
         {
-            List<AnimatorState> oldStates = GetStatesRecursive(old);
-            List<AnimatorState> newStates = GetStatesRecursive(n);
+            var oldStates = GetStatesRecursive(old);
+            var newStates = GetStatesRecursive(n);
             var newAnimatorsByChildren = new Dictionary<AnimatorStateMachine, AnimatorStateMachine>();
             var oldAnimatorsByChildren = new Dictionary<AnimatorStateMachine, AnimatorStateMachine>();
-            List<AnimatorStateMachine> oldStateMachines = GetStateMachinesRecursive(old, oldAnimatorsByChildren);
-            List<AnimatorStateMachine> newStateMachines = GetStateMachinesRecursive(n, newAnimatorsByChildren);
+            var oldStateMachines = GetStateMachinesRecursive(old, oldAnimatorsByChildren);
+            var newStateMachines = GetStateMachinesRecursive(n, newAnimatorsByChildren);
             // Generate state transitions
-            for (int i = 0; i < oldStates.Count; i++)
-            {
-                foreach (var transition in oldStates[i].transitions)
+            for (var i = 0; i < oldStates.Count; i++)
+                foreach (AnimatorStateTransition transition in oldStates[i].transitions)
                 {
                     AnimatorStateTransition newTransition = null;
-                    if (transition.isExit && transition.destinationState == null && transition.destinationStateMachine == null)
+                    if (transition.isExit && transition.destinationState == null &&
+                        transition.destinationStateMachine == null)
                     {
                         newTransition = newStates[i].AddExitTransition();
                     }
                     else if (transition.destinationState != null)
                     {
-                        var dstState = FindMatchingState(oldStates, newStates, transition);
+                        AnimatorState dstState = FindMatchingState(oldStates, newStates, transition);
                         if (dstState != null)
                             newTransition = newStates[i].AddTransition(dstState);
                     }
                     else if (transition.destinationStateMachine != null)
                     {
-                        var dstState = FindMatchingStateMachine(oldStateMachines, newStateMachines, transition);
+                        AnimatorStateMachine dstState =
+                            FindMatchingStateMachine(oldStateMachines, newStateMachines, transition);
                         if (dstState != null)
                             newTransition = newStates[i].AddTransition(dstState);
                     }
@@ -495,56 +453,65 @@ namespace NAK.SimpleAAS
                     if (newTransition != null)
                         ApplyTransitionSettings(transition, newTransition);
                 }
-            }
 
-            for (int i = 0; i < oldStateMachines.Count; i++)
+            for (var i = 0; i < oldStateMachines.Count; i++)
             {
-                if (oldAnimatorsByChildren.ContainsKey(oldStateMachines[i]) && newAnimatorsByChildren.ContainsKey(newStateMachines[i]))
-                {
-                    foreach (var transition in oldAnimatorsByChildren[oldStateMachines[i]].GetStateMachineTransitions(oldStateMachines[i]))
+                if (oldAnimatorsByChildren.ContainsKey(oldStateMachines[i]) &&
+                    newAnimatorsByChildren.ContainsKey(newStateMachines[i]))
+                    foreach (AnimatorTransition transition in oldAnimatorsByChildren[oldStateMachines[i]]
+                                 .GetStateMachineTransitions(oldStateMachines[i]))
                     {
                         AnimatorTransition newTransition = null;
-                        if (transition.isExit && transition.destinationState == null && transition.destinationStateMachine == null)
+                        if (transition.isExit && transition.destinationState == null &&
+                            transition.destinationStateMachine == null)
                         {
-                            newTransition = newAnimatorsByChildren[newStateMachines[i]].AddStateMachineExitTransition(newStateMachines[i]);
+                            newTransition = newAnimatorsByChildren[newStateMachines[i]]
+                                .AddStateMachineExitTransition(newStateMachines[i]);
                         }
                         else if (transition.destinationState != null)
                         {
-                            var dstState = FindMatchingState(oldStates, newStates, transition);
+                            AnimatorState dstState = FindMatchingState(oldStates, newStates, transition);
                             if (dstState != null)
-                                newTransition = newAnimatorsByChildren[newStateMachines[i]].AddStateMachineTransition(newStateMachines[i], dstState);
+                                newTransition = newAnimatorsByChildren[newStateMachines[i]]
+                                    .AddStateMachineTransition(newStateMachines[i], dstState);
                         }
                         else if (transition.destinationStateMachine != null)
                         {
-                            var dstState = FindMatchingStateMachine(oldStateMachines, newStateMachines, transition);
+                            AnimatorStateMachine dstState =
+                                FindMatchingStateMachine(oldStateMachines, newStateMachines, transition);
                             if (dstState != null)
-                                newTransition = newAnimatorsByChildren[newStateMachines[i]].AddStateMachineTransition(newStateMachines[i], dstState);
+                                newTransition = newAnimatorsByChildren[newStateMachines[i]]
+                                    .AddStateMachineTransition(newStateMachines[i], dstState);
                         }
 
                         if (newTransition != null)
                             ApplyTransitionSettings(transition, newTransition);
                     }
-                }
+
                 // Generate AnyState transitions
-                GenerateStateMachineBaseTransitions(oldStateMachines[i], newStateMachines[i], oldStates, newStates, oldStateMachines, newStateMachines);
+                GenerateStateMachineBaseTransitions(oldStateMachines[i], newStateMachines[i], oldStates, newStates,
+                    oldStateMachines, newStateMachines);
             }
         }
 
-        private static void GenerateStateMachineBaseTransitions(AnimatorStateMachine old, AnimatorStateMachine n, List<AnimatorState> oldStates,
-            List<AnimatorState> newStates, List<AnimatorStateMachine> oldStateMachines, List<AnimatorStateMachine> newStateMachines)
+        private static void GenerateStateMachineBaseTransitions(AnimatorStateMachine old, AnimatorStateMachine n,
+            List<AnimatorState> oldStates,
+            List<AnimatorState> newStates, List<AnimatorStateMachine> oldStateMachines,
+            List<AnimatorStateMachine> newStateMachines)
         {
-            foreach (var transition in old.anyStateTransitions)
+            foreach (AnimatorStateTransition transition in old.anyStateTransitions)
             {
                 AnimatorStateTransition newTransition = null;
                 if (transition.destinationState != null)
                 {
-                    var dstState = FindMatchingState(oldStates, newStates, transition);
+                    AnimatorState dstState = FindMatchingState(oldStates, newStates, transition);
                     if (dstState != null)
                         newTransition = n.AddAnyStateTransition(dstState);
                 }
                 else if (transition.destinationStateMachine != null)
                 {
-                    var dstState = FindMatchingStateMachine(oldStateMachines, newStateMachines, transition);
+                    AnimatorStateMachine dstState =
+                        FindMatchingStateMachine(oldStateMachines, newStateMachines, transition);
                     if (dstState != null)
                         newTransition = n.AddAnyStateTransition(dstState);
                 }
@@ -554,18 +521,19 @@ namespace NAK.SimpleAAS
             }
 
             // Generate EntryState transitions
-            foreach (var transition in old.entryTransitions)
+            foreach (AnimatorTransition transition in old.entryTransitions)
             {
                 AnimatorTransition newTransition = null;
                 if (transition.destinationState != null)
                 {
-                    var dstState = FindMatchingState(oldStates, newStates, transition);
+                    AnimatorState dstState = FindMatchingState(oldStates, newStates, transition);
                     if (dstState != null)
                         newTransition = n.AddEntryTransition(dstState);
                 }
                 else if (transition.destinationStateMachine != null)
                 {
-                    var dstState = FindMatchingStateMachine(oldStateMachines, newStateMachines, transition);
+                    AnimatorStateMachine dstState =
+                        FindMatchingStateMachine(oldStateMachines, newStateMachines, transition);
                     if (dstState != null)
                         newTransition = n.AddEntryTransition(dstState);
                 }
@@ -575,7 +543,8 @@ namespace NAK.SimpleAAS
             }
         }
 
-        private static void ApplyTransitionSettings(AnimatorStateTransition transition, AnimatorStateTransition newTransition)
+        private static void ApplyTransitionSettings(AnimatorStateTransition transition,
+            AnimatorStateTransition newTransition)
         {
             newTransition.canTransitionToSelf = transition.canTransitionToSelf;
             newTransition.duration = transition.duration;
@@ -590,9 +559,9 @@ namespace NAK.SimpleAAS
             newTransition.interruptionSource = transition.interruptionSource;
             newTransition.orderedInterruption = transition.orderedInterruption;
             newTransition.solo = transition.solo;
-            foreach (var condition in transition.conditions)
-                newTransition.AddCondition(condition.mode, condition.threshold, GetNewParameterNameIfSwapped(condition.parameter));
-
+            foreach (AnimatorCondition condition in transition.conditions)
+                newTransition.AddCondition(condition.mode, condition.threshold,
+                    GetNewParameterNameIfSwapped(condition.parameter));
         }
 
         private static void ApplyTransitionSettings(AnimatorTransition transition, AnimatorTransition newTransition)
@@ -602,9 +571,9 @@ namespace NAK.SimpleAAS
             newTransition.mute = transition.mute;
             newTransition.name = transition.name;
             newTransition.solo = transition.solo;
-            foreach (var condition in transition.conditions)
-                newTransition.AddCondition(condition.mode, condition.threshold, GetNewParameterNameIfSwapped(condition.parameter));
-
+            foreach (AnimatorCondition condition in transition.conditions)
+                newTransition.AddCondition(condition.mode, condition.threshold,
+                    GetNewParameterNameIfSwapped(condition.parameter));
         }
     }
 }
