@@ -22,8 +22,10 @@
 
 //https://github.com/poiyomi/PoiyomiToonShader/
 
+#if UNITY_EDITOR && CVR_CCK_EXISTS
 using System.Linq;
 using ABI.CCK.Scripts.Editor;
+using NAK.SimpleAAS.Components;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -34,10 +36,37 @@ namespace NAK.SimpleAAS
 {
     public class ControllerCompiler
     {
+        public static void CompileControllers(NAKSimpleAAS script)
+        {
+            AnimatorController resultController = MergeMultipleControllers(
+                script.customControllers,
+                null,
+                true,
+                false,
+                script.avatar.gameObject.name
+            );
+
+            if (script.overrideController != null)
+            {
+                script.overrideController.runtimeAnimatorController = resultController;
+                script.avatar.overrides = script.overrideController;
+            }
+
+            if (script.avatar.gameObject.TryGetComponent<Animator>(out Animator animator))
+                animator.runtimeAnimatorController = script.overrideController;
+
+            EditorUtility.SetDirty(script.avatar);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
         [InitializeOnLoad]
         public class CompileControllersOnBuild
         {
-            static CompileControllersOnBuild() => CCK_BuildUtility.PreAvatarBundleEvent.AddListener(OnPreBundleEvent);
+            static CompileControllersOnBuild()
+            {
+                CCK_BuildUtility.PreAvatarBundleEvent.AddListener(OnPreBundleEvent);
+            }
 
             private static void OnPreBundleEvent(GameObject uploadedObject)
             {
@@ -51,31 +80,6 @@ namespace NAK.SimpleAAS
                 if (targetAvatar != null) CompileControllers(targetAvatar);
             }
         }
-
-        public static void CompileControllers(NAKSimpleAAS script)
-        {
-            AnimatorController resultController = MergeMultipleControllers(
-                script.avatarControllers,
-                null,
-                true,
-                false,
-                script.avatar.gameObject.name
-            );
-
-            if (script.baseOverrideController != null)
-            {
-                script.baseOverrideController.runtimeAnimatorController = resultController;
-                script.avatar.overrides = script.baseOverrideController;
-            }
-
-            if (script.avatar.gameObject.TryGetComponent<Animator>(out var animator))
-            {
-                animator.runtimeAnimatorController = script.baseOverrideController;
-            }
-
-            EditorUtility.SetDirty(script.avatar);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-        }
     }
 }
+#endif

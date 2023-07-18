@@ -22,6 +22,7 @@
 
 //https://github.com/VRLabs/Avatars-3.0-Manager
 
+#if UNITY_EDITOR && CVR_CCK_EXISTS
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -30,7 +31,6 @@ using ABI.CCK.Components;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
-using static ABI.CCK.Components.CVRParameterStreamEntry;
 
 namespace NAK.SimpleAAS
 {
@@ -86,7 +86,7 @@ namespace NAK.SimpleAAS
         {
             foreach (AnimatorControllerParameter p in controllerToMerge.parameters)
             {
-                AnimatorControllerParameter newP = new AnimatorControllerParameter
+                AnimatorControllerParameter newP = new AnimatorControllerParameter()
                 {
                     name = GetNewParameterNameIfSwapped(p.name),
                     type = p.type,
@@ -121,7 +121,8 @@ namespace NAK.SimpleAAS
 
         private static string GetNewParameterNameIfSwapped(string parameterName)
         {
-            return !string.IsNullOrWhiteSpace(parameterName) && _parametersNewName.TryGetValue(parameterName, out var parameterNewName)
+            return !string.IsNullOrWhiteSpace(parameterName) &&
+                   _parametersNewName.TryGetValue(parameterName, out var parameterNewName)
                 ? parameterNewName
                 : parameterName;
         }
@@ -144,7 +145,7 @@ namespace NAK.SimpleAAS
 
         private static AnimatorControllerLayer CloneLayer(AnimatorControllerLayer old, bool isFirstLayer = false)
         {
-            AnimatorControllerLayer n = new AnimatorControllerLayer
+            AnimatorControllerLayer n = new AnimatorControllerLayer()
             {
                 avatarMask = old.avatarMask,
                 blendingMode = old.blendingMode,
@@ -160,7 +161,7 @@ namespace NAK.SimpleAAS
 
         private static AnimatorStateMachine CloneStateMachine(AnimatorStateMachine old)
         {
-            AnimatorStateMachine n = new AnimatorStateMachine
+            AnimatorStateMachine n = new AnimatorStateMachine()
             {
                 anyStatePosition = old.anyStatePosition,
                 entryPosition = old.entryPosition,
@@ -186,7 +187,7 @@ namespace NAK.SimpleAAS
 
         private static ChildAnimatorStateMachine CloneChildStateMachine(ChildAnimatorStateMachine old)
         {
-            ChildAnimatorStateMachine n = new ChildAnimatorStateMachine
+            ChildAnimatorStateMachine n = new ChildAnimatorStateMachine()
             {
                 position = old.position,
                 stateMachine = CloneStateMachine(old.stateMachine)
@@ -196,7 +197,7 @@ namespace NAK.SimpleAAS
 
         private static ChildAnimatorState CloneChildAnimatorState(ChildAnimatorState old)
         {
-            ChildAnimatorState n = new ChildAnimatorState
+            ChildAnimatorState n = new ChildAnimatorState()
             {
                 position = old.position,
                 state = CloneAnimatorState(old.state)
@@ -223,7 +224,7 @@ namespace NAK.SimpleAAS
                 AssetDatabase.AddObjectToAsset(motion, _assetPath);
             }
 
-            AnimatorState n = new AnimatorState
+            AnimatorState n = new AnimatorState()
             {
                 cycleOffset = old.cycleOffset,
                 cycleOffsetParameter = GetNewParameterNameIfSwapped(old.cycleOffsetParameter),
@@ -267,7 +268,7 @@ namespace NAK.SimpleAAS
             {
                 var children = pastedTree.children;
 
-                ChildMotion childMotion = new ChildMotion
+                ChildMotion childMotion = new ChildMotion()
                 {
                     timeScale = child.timeScale,
                     position = child.position,
@@ -304,43 +305,43 @@ namespace NAK.SimpleAAS
 
             switch (n)
             {
-                 case AnimatorDriver l:
-                     {
-                         var o = old as AnimatorDriver;
-                         l.EnterTasks = o.EnterTasks.ConvertAll(task => new AnimatorDriverTask
-                         { 
-                             aName = GetNewParameterNameIfSwapped(task.aName), 
-                             aType = task.aType,
-                             aValue = task.aValue,
-                             aMax = task.aMax,
-                             aParamType = task.aParamType,
-                             bName = GetNewParameterNameIfSwapped(task.bName), 
-                             bType = task.bType,
-                             bValue = task.bValue,
-                             bMax = task.bMax,
-                             bParamType = task.bParamType,
-                             targetType = task.targetType, 
-                             targetName = GetNewParameterNameIfSwapped(task.targetName),
-                             op = task.op,
-                         });
-                         l.ExitTasks = o.ExitTasks.ConvertAll(task => new AnimatorDriverTask
-                         {
-                             aName = GetNewParameterNameIfSwapped(task.aName),
-                             aType = task.aType,
-                             aValue = task.aValue,
-                             aMax = task.aMax,
-                             aParamType = task.aParamType,
-                             bName = GetNewParameterNameIfSwapped(task.bName),
-                             bType = task.bType,
-                             bValue = task.bValue,
-                             bMax = task.bMax,
-                             bParamType = task.bParamType,
-                             targetType = task.targetType,
-                             targetName = GetNewParameterNameIfSwapped(task.targetName),
-                             op = task.op,
-                         });
-                        break;
-                     }
+                case AnimatorDriver l:
+                {
+                    AnimatorDriver o = old as AnimatorDriver;
+                    l.EnterTasks = o.EnterTasks.ConvertAll(task => new AnimatorDriverTask
+                    {
+                        aName = GetNewParameterNameIfSwapped(task.aName),
+                        aType = task.aType,
+                        aValue = task.aValue,
+                        aMax = task.aMax,
+                        aParamType = task.aParamType,
+                        bName = GetNewParameterNameIfSwapped(task.bName),
+                        bType = task.bType,
+                        bValue = task.bValue,
+                        bMax = task.bMax,
+                        bParamType = task.bParamType,
+                        targetType = task.targetType,
+                        targetName = GetNewParameterNameIfSwapped(task.targetName),
+                        op = task.op
+                    });
+                    l.ExitTasks = o.ExitTasks.ConvertAll(task => new AnimatorDriverTask
+                    {
+                        aName = GetNewParameterNameIfSwapped(task.aName),
+                        aType = task.aType,
+                        aValue = task.aValue,
+                        aMax = task.aMax,
+                        aParamType = task.aParamType,
+                        bName = GetNewParameterNameIfSwapped(task.bName),
+                        bType = task.bType,
+                        bValue = task.bValue,
+                        bMax = task.bMax,
+                        bParamType = task.bParamType,
+                        targetType = task.targetType,
+                        targetName = GetNewParameterNameIfSwapped(task.targetName),
+                        op = task.op
+                    });
+                    break;
+                }
             }
         }
 
@@ -577,3 +578,4 @@ namespace NAK.SimpleAAS
         }
     }
 }
+#endif

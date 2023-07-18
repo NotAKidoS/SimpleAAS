@@ -1,4 +1,6 @@
-﻿using UnityEditor;
+﻿#if UNITY_EDITOR && CVR_CCK_EXISTS
+using NAK.SimpleAAS.Components;
+using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 using static NAK.SimpleAAS.ControllerCompiler;
@@ -8,46 +10,54 @@ namespace NAK.SimpleAAS
     [CustomEditor(typeof(NAKSimpleAAS))]
     public class NAKSimpleAASEditor : Editor
     {
+        #region Variables
+
         private SerializedProperty _avatar;
-        private SerializedProperty _baseOverrideController;
-        private SerializedProperty _avatarControllers;
+        private SerializedProperty _overrideController;
+        private SerializedProperty _customControllers;
         private ReorderableList _controllerReorderableList;
+
+        #endregion
 
         #region GUI Methods
 
         private void OnEnable()
         {
-            _avatar = serializedObject.FindProperty("avatar");
-            _baseOverrideController = serializedObject.FindProperty("baseOverrideController");
-            _avatarControllers = serializedObject.FindProperty("avatarControllers");
+            _avatar = serializedObject.FindProperty(nameof(NAKSimpleAAS.avatar));
+            _overrideController = serializedObject.FindProperty(nameof(NAKSimpleAAS.overrideController));
+            _customControllers = serializedObject.FindProperty(nameof(NAKSimpleAAS.customControllers));
 
-            _controllerReorderableList = new ReorderableList(serializedObject, _avatarControllers, true, true, true, true)
-            {
-                drawHeaderCallback = DrawControllerListHeader,
-                drawElementCallback = DrawControllerListItems
-            };
+            _controllerReorderableList =
+                new ReorderableList(serializedObject, _customControllers, true, true, true, true)
+                {
+                    drawHeaderCallback = DrawControllerListHeader,
+                    drawElementCallback = DrawControllerListItems
+                };
         }
 
         public override void OnInspectorGUI()
         {
-            var script = (NAKSimpleAAS)target;
+            NAKSimpleAAS script = (NAKSimpleAAS)target;
             serializedObject.UpdateIfRequiredOrScript();
 
             EditorGUILayout.PropertyField(_avatar);
-            EditorGUILayout.PropertyField(_baseOverrideController);
+            EditorGUILayout.PropertyField(_overrideController);
             EditorGUILayout.Space();
 
-            int parameterUsage = script.GetParameterSyncUsage();
+            var parameterUsage = script.GetParameterSyncUsage();
             EditorGUI.ProgressBar(
                 EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight),
                 parameterUsage / 3200f,
                 parameterUsage + " of 3200 Synced Bits used."
             );
-            
+
             _controllerReorderableList.DoLayoutList();
 
-            if (GUILayout.Button("Compile Controllers"))
-                CompileControllers(script);
+            using (new EditorGUI.DisabledScope(script.IsInvalid()))
+            {
+                if (GUILayout.Button("Compile Controllers"))
+                    CompileControllers(script);
+            }
 
             serializedObject.ApplyModifiedProperties();
         }
@@ -75,3 +85,4 @@ namespace NAK.SimpleAAS
         #endregion
     }
 }
+#endif

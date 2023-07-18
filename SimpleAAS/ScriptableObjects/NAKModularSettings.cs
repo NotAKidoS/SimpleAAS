@@ -1,10 +1,32 @@
-﻿using System.Collections.Generic;
+﻿#if UNITY_EDITOR && CVR_CCK_EXISTS
+using System.Collections.Generic;
 using ABI.CCK.Scripts;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "SimpleAAS_Parameters", menuName = "NAKSimpleAAS/SimpleAAS_Parameters")]
 public class NAKModularSettings : ScriptableObject
 {
+    //maybe we parse this on upload?
+    public enum SimpleAAS_ParameterType
+    {
+        Float = 1,
+        Int = 2,
+        Bool = 3
+    }
+
+    public enum SimpleAAS_SettingsType
+    {
+        Toggle,
+        Dropdown,
+        Color,
+        Slider,
+        Joystick2D,
+        Joystick3D,
+        InputSingle,
+        InputVector2,
+        InputVector3
+    }
+
     public List<CVRAdvancedSettingsEntry> settings = new List<CVRAdvancedSettingsEntry>();
 
     public static CVRAdvancesAvatarSettingBase.ParameterType GetDefaultType(
@@ -50,25 +72,5 @@ public class NAKModularSettings : ScriptableObject
 
         return supportedTypes;
     }
-
-    public enum SimpleAAS_SettingsType
-    {
-        Toggle,
-        Dropdown,
-        Color,
-        Slider,
-        Joystick2D,
-        Joystick3D,
-        InputSingle,
-        InputVector2,
-        InputVector3
-    }
-
-    //maybe we parse this on upload?
-    public enum SimpleAAS_ParameterType
-    {
-        Float = 1,
-        Int = 2,
-        Bool = 3
-    }
 }
+#endif

@@ -1,4 +1,7 @@
-﻿using UnityEditor;
+﻿#if UNITY_EDITOR && CVR_CCK_EXISTS
+using ABI.CCK.Scripts;
+using NAK.SimpleAAS.Components;
+using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 
@@ -8,8 +11,8 @@ namespace NAK.SimpleAAS
     public class NAKSimpleAASParametersEditor : Editor
     {
         private SerializedProperty _avatar;
-        private SerializedProperty _simpleAASParameters;
         private ReorderableList _parameterList;
+        private SerializedProperty _simpleAASParameters;
 
         private void OnEnable()
         {
@@ -25,10 +28,7 @@ namespace NAK.SimpleAAS
             EditorGUILayout.PropertyField(_avatar);
             _parameterList.DoLayoutList();
 
-            if (GUILayout.Button("Sync To Avatar"))
-            {
-                SyncSettingsToAvatar((NAKSimpleAASParameters)target);
-            }
+            if (GUILayout.Button("Sync To Avatar")) SyncSettingsToAvatar((NAKSimpleAASParameters)target);
 
             serializedObject.ApplyModifiedProperties();
         }
@@ -40,7 +40,8 @@ namespace NAK.SimpleAAS
                 drawElementCallback = (rect, index, isActive, isFocused) =>
                 {
                     SerializedProperty element = _parameterList.serializedProperty.GetArrayElementAtIndex(index);
-                    EditorGUI.PropertyField(new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight), element, GUIContent.none);
+                    EditorGUI.PropertyField(new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight),
+                        element, GUIContent.none);
                 },
                 drawHeaderCallback = rect => EditorGUI.LabelField(rect, "Modular Settings")
             };
@@ -49,15 +50,12 @@ namespace NAK.SimpleAAS
         private static void SyncSettingsToAvatar(NAKSimpleAASParameters modularSettings)
         {
             modularSettings.avatar.avatarSettings.settings.Clear();
-            foreach (var settings in modularSettings.simpleAASParameters)
-            {
-                foreach (var setting in settings.settings)
-                {
-                    modularSettings.avatar.avatarSettings.settings.Add(setting);
-                }
-            }
+            foreach (NAKModularSettings settings in modularSettings.simpleAASParameters)
+            foreach (CVRAdvancedSettingsEntry setting in settings.settings)
+                modularSettings.avatar.avatarSettings.settings.Add(setting);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
     }
 }
+#endif
