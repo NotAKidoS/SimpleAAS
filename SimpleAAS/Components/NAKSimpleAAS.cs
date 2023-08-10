@@ -83,8 +83,9 @@ namespace NAK.SimpleAAS.Components
                 }
             }
 
-            foreach (CVRAdvancedSettingsEntry entry in avatar.avatarSettings.settings)
-                CountEntryTypes(entry, animatorParameterNames, ref syncedValues, ref syncedBooleans);
+            // ChilloutVR does not count these in-game. Idk why CCK does...
+            // foreach (CVRAdvancedSettingsEntry entry in avatar.avatarSettings.settings)
+            //     CountEntryTypes(entry, animatorParameterNames, ref syncedValues, ref syncedBooleans);
 
             return CalculateSyncUsage(syncedValues, syncedBooleans);
         }
