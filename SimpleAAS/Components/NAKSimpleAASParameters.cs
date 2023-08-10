@@ -6,6 +6,7 @@ using UnityEngine.Scripting.APIUpdating;
 namespace NAK.SimpleAAS.Components
 {
     [MovedFrom("NAK.SimpleAAS")]
+    [HelpURL("https://github.com/NotAKidOnSteam/SimpleAAS")]
     public class NAKSimpleAASParameters : MonoBehaviour
     {
         #region Unity Methods

@@ -12,6 +12,7 @@ using UnityEngine.Serialization;
 namespace NAK.SimpleAAS.Components
 {
     [MovedFrom("NAK.SimpleAAS")]
+    [HelpURL("https://github.com/NotAKidOnSteam/SimpleAAS")]
     public class NAKSimpleAAS : MonoBehaviour
     {
         #region Core Parameters
@@ -74,6 +75,9 @@ namespace NAK.SimpleAAS.Components
 
                 foreach (AnimatorControllerParameter parameter in controller.parameters)
                 {
+                    if (animatorParameterNames.Contains(parameter.name))
+                        continue;
+                    
                     CountParameterTypes(parameter, ref syncedValues, ref syncedBooleans);
                     animatorParameterNames.Add(parameter.name);
                 }
