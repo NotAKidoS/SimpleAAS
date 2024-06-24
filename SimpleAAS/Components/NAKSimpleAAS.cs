@@ -132,15 +132,15 @@ namespace NAK.SimpleAAS.Components
 
             switch (entry.type)
             {
-                case CVRAdvancedSettingsEntry.SettingsType.GameObjectToggle:
+                case CVRAdvancedSettingsEntry.SettingsType.Toggle:
                     if (animatorParameters.Contains(entry.machineName))
                         break;
-                    if (entry.setting.usedType == CVRAdvancesAvatarSettingBase.ParameterType.GenerateBool)
+                    if (entry.setting.usedType == CVRAdvancesAvatarSettingBase.ParameterType.Bool)
                         syncedBooleans += 1;
                     else
                         syncedValues += 1;
                     break;
-                case CVRAdvancedSettingsEntry.SettingsType.MaterialColor:
+                case CVRAdvancedSettingsEntry.SettingsType.Color:
                     IncrementSyncValuesForEntry(entry, animatorParameters, ref syncedValues, "-r", "-g", "-b");
                     break;
                 case CVRAdvancedSettingsEntry.SettingsType.Joystick2D:
@@ -153,7 +153,7 @@ namespace NAK.SimpleAAS.Components
                     break;
                 case CVRAdvancedSettingsEntry.SettingsType.Slider:
                 case CVRAdvancedSettingsEntry.SettingsType.InputSingle:
-                case CVRAdvancedSettingsEntry.SettingsType.GameObjectDropdown:
+                case CVRAdvancedSettingsEntry.SettingsType.Dropdown:
                 default:
                     if (!animatorParameters.Contains(entry.machineName)) syncedValues += 1;
                     break;
